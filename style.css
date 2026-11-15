@@ -1,0 +1,96 @@
+body {
+  font-size: 18px;
+}
+
+.title {
+  font-size: 32px;
+}
+
+.hidden {
+  display: none;
+}
+
+table {
+  border: 1px solid black;   /* テーブル全体に1本の枠線 */
+  border-collapse: collapse; /* セルの枠線が重ならないように */
+  width: 100%;
+}
+
+th, td {
+  padding: 8px;     /* セル内の余白 */
+  text-align: left; /* セル内のテキストを左揃え */
+}
+td.ques {
+  font-family: 'Arial', sans-serif; // 'HGS教科書体'
+  font-size: 24px;
+}
+td.ans {
+  font-size: 18px;
+  background-color: lightyellow;
+}
+button {
+  vertical-align: middle; /* 垂直方向で中央揃え */
+}
+ul, li {
+  font-size: 12px;
+}
+ul {
+  padding-left: 18px;
+}
+.ref {
+  display: inline-block;
+  border: 1px solid black;
+  background: black;
+  color: white;
+  line-height: 1.1;
+}
+.info {
+  display: inline-block;
+  border: 1px solid red;
+  color: red;
+  line-height: 1.1;
+}
+.word {
+  display: inline-block;
+  font-weight: bold;
+  text-decoration: underline;
+}
+.mean {
+  display: inline-block;
+  border: 1px solid black;
+  line-height: 1.1;
+}
+.mean2 {
+  display: inline-block;
+  border: 1px solid black;
+  background: black;
+  color: white;
+  line-height: 1.1;
+}
+.circle {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  padding: 0.2em;
+  width: 0.8em;
+  height: 0.8em;
+  border: 1.5px solid black;
+  background: transparent;
+  border-radius: 50%;
+}
+.strike {
+  text-decoration: line-through;
+}
+.box{
+  cursor:pointer;
+  user-select:none;
+}
+.boxCell{
+  width:32px;
+  text-align:center;
+  white-space:nowrap;
+}
+.c0{ color:black; }
+.c1{ color:green; }
+.c2{ color:gold; }
+.c3{ color:red; }
