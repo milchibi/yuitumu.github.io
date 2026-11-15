@@ -3,10 +3,607 @@
   <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title></title>
-    <link rel="stylesheet" href="style.css">
+    <title id="pageTitle"></title>
+    <link rel="stylesheet" href="../../style.css">
   </head>
+
   <body>
+    <h1 id="pageHeading"></h1>
+    <h2 id="pageSubtitle"></h2>
+
+    <table border="1">
+      <tbody id="quizTable"></tbody>
+    </table>
+
+    <br>
+    <div id="container"></div>
+    <br>
+
+    <a id="prevLink" href="">前へ</a>
+    　<a id="backLink" href="">戻る</a>
+    　<a id="nextLink" href="">次へ</a>
+
+    <script>
+      // URLパラメータ
+      const params = new URLSearchParams(location.search);
+  
+      const grade = parseInt(params.get('grade')) || 0;
+      const cat   = parseInt(params.get('cat'))   || 0;
+      const sel   = parseInt(params.get('sel'))   || 0;
+      const page  = parseInt(params.get('page'))  || 0;
+      const seed  = parseInt(params.get('seed'))  || 0;
+  
+      // 共通データ
+      const sels = [
+        "甲子","乙丑","丙寅","丁卯","戊辰","己巳","庚午","辛未","壬申","癸酉",
+        "甲戌","乙亥","丙子","丁丑","戊寅","己卯","庚辰","辛巳","壬午","癸未",
+        "甲申","乙酉","丙戌","丁亥","戊子","己丑","庚寅","辛卯","壬辰","癸巳",
+        "甲午","乙未","丙申","丁酉","戊戌","己亥","庚子","辛丑","壬寅","癸卯",
+        "甲辰","乙巳","丙午","丁未","戊申","己酉","庚戌","辛亥","壬子","癸丑",
+        "甲寅","乙卯","丙辰","丁巳","戊午","己未","庚申","辛酉","壬戌","癸亥"
+      ];
+  
+      const titles = [
+        "立春","雨水","啓蟄","春分","清明","穀雨",
+        "立夏","小満","芒種","夏至","小暑","大暑",
+        "立秋","処暑","白露","秋分","寒露","霜降",
+        "立冬","小雪","大雪","冬至","小寒","大寒"
+      ];
+  
+      // 級別設定
+      const gradeConfigs = {
+        // 漢検1級
+        0: {
+          heading: "漢検1級勉強",
+          cats: ["音読み", "訓読み", "書き取り", "書き取り・国字", "語選択", "四字熟語・書き", "四字熟語・意味", "熟字訓", "熟語・一字訓読み", "対義語", "類義語", "故事成語", "文章題"],
+          keys: ["result11", "result12", "result21", "NULL22", "result3", "result41", "NULL42", "result5", "result6", "result71", "result72", "result8", "NULL9"],
+          keys2: [null, null, null, null, null, "result41_2", null, null, null, null, null, null, null],
+          counts: {
+            result11: 4521,
+            result12: 1566,
+            result21: 558,
+            result3: 3786,
+            result41: 1151,
+            result5: 2190,
+            result6: 1028,
+            result71: 459,
+            result72: 795,
+            result8: 2390
+          },
+          categories: {
+            0: {
+              num: 20,
+              max: 4521,
+              filename: "https://milchibi.github.io/data_11.csv",
+              selectionNum: 0
+            },
+          }
+        },
+      };
+
+      // gradeのチェック
+      const config = gradeConfigs[grade];    
+      if (!config) {
+        document.body.innerHTML = `
+          <h1>エラー</h1>
+          <p>対応していないgradeです。</p>
+        `;
+        throw new Error("Unsupported grade: " + grade);
+      }
+
+      // catの設定
+      const catConfig = config.categories[cat];
+      if (!catConfig) {
+        document.body.innerHTML = `
+          <h1>エラー</h1>
+          <p>この級では対応していないカテゴリです。</p>
+        `;
+        throw new Error("Unsupported category: grade=" + grade + ", cat=" + cat);
+      }
+
+      const num = catConfig.num;
+      const max = catConfig.max;
+      const filename = catConfig.filename;
+
+      // localStorage初期化
+      const KEY_STR = config.keys;
+      const KEY_STR2 = config.keys2;
+
+      // 必要なresultキーだけ初期化
+      Object.entries(config.counts).forEach(([key, count]) => {
+        let value = localStorage.getItem(key);
+        let status;
+        if (value === null) {
+          status = "0".repeat(count);
+        }
+        else {
+          status = String(value);
+          if (status.length < count) {
+            status += "0".repeat(count - status.length);
+          }
+          // 万一長すぎた場合はCOUNTに合わせる
+          if (status.length > count) {
+            status = status.substring(0, count);
+          }
+        }
+        localStorage.setItem(key, status);
+      });
+
+      // インデックス
+      let startIndex;
+      if (grade === 0 && cat === 5) {
+        startIndex = (sel * 24 * (num / 2)) + (page * (num / 2));
+      }
+      else {
+        startIndex = (sel * 24 * num) + (page * num);
+      }
+      const shuffledIndex = Array.from({ length: max }, (_, i) => i);
+      const shuffledIndex2 = Array.from({ length: max }, (_, i) => i);
+
+      // シャッフル
+      if (seed !== 0) {
+        let random = mulberry32(seed);
+        for (let i = shuffledIndex.length - 1; i > 0; i--) {
+          const j = Math.floor(random() * (i + 1));
+          [shuffledIndex[i], shuffledIndex[j]] = [shuffledIndex[j], shuffledIndex[i]];
+        }
+        random = mulberry32(seed * 1000);
+        for (let i = shuffledIndex2.length - 1; i > 0; i--) {
+          const j = Math.floor(random() * (i + 1));
+          [shuffledIndex2[i], shuffledIndex2[j]] = [shuffledIndex2[j], shuffledIndex2[i]];
+        }
+      }
+
+      // タイトル
+      const catName = config.cats[cat] || "";
+      const selName = sels[sel] || "";
+      const pageName = titles[page] || "";
+      const titleText = `${config.heading}　${catName}【${selName}-${pageName}】`;
+      
+      document.getElementById("pageTitle").textContent = titleText;
+      document.getElementById("pageHeading").textContent = config.heading;
+      document.getElementById("pageSubtitle").textContent = `${catName}【${selName}-${pageName}】`;
+      
+      // 選択肢用コンテナ
+      if (catConfig.selectionNum !== 0) {
+        const container = document.getElementById("container");
+        const items =
+          Array.from(
+            { length: catConfig.selectionNum },
+            (_, i) =>
+              `<span id="sel${i}" class="item"></span>`
+          );
+        container.innerHTML = `[${items.join("・")}]`;
+      }
+
+      // 問題欄生成
+      const tbody = document.getElementById("quizTable");
+
+      for (let i = 1; i <= num; i++) {
+        tbody.insertAdjacentHTML(
+          "beforeend",
+          `
+            <tr>
+              <td width="52">問${i}</td>
+              <td id="txt${i}q" class="ques" colspan="2"></td>
+            </tr>
+      
+            <tr>
+              <td class="ans">
+                <button
+                  class="toggleBtn"
+                  data-id="${i}">
+                  解答
+                </button>
+              </td>
+      
+              <td class="ans">
+                <div
+                  id="txt${i}"
+                  class="hidden">
+                </div>
+              </td>
+      
+              <td class="ans boxCell">
+                <div
+                  class="box hidden"
+                  data-index="${i}">
+                  ■
+                </div>
+              </td>
+            </tr>
+          `
+        );
+      }
+
+      // CSV読み込み
+      fetch(filename)
+        .then(res => {
+          if (!res.ok) {
+            throw new Error(`CSV読み込み失敗: ${res.status} ${filename}`);
+          }
+          return res.text();
+        })
+      
+        .then(csv => {
+          const data = csv.split("\n").map(line => line.split(","));
+
+          // 問題表示
+          if (grade === 0 && cat === 5) {
+            for (let i = 0; i < (num / 2); i++) {
+              const index = shuffledIndex[startIndex + i];
+              const row = data[index];
+              if (!row) continue;
+        
+              // 問題
+              document.getElementById(`txt${i + 1}q`).innerHTML = "（　　）" + row[3].slice(-2);
+
+              // 解答
+              document.getElementById(`txt${i + 1}`).innerHTML = 
+                row[3].slice(0, 2) + 
+                "<br><hr>" + 
+                "■" + row[6] + 
+                "<br>" + 
+                row[7];
+            }
+            for (let i = 0; i < (num / 2); i++) {
+              const index = shuffledIndex2[startIndex + i];
+              const row = data[index];
+              if (!row) continue;
+        
+              // 問題
+              document.getElementById(`txt${i + 1 + (num / 2)}q`).innerHTML = row[3].slice(0, 2) + "（　　）";
+
+              // 解答
+              document.getElementById(`txt${i + 1 + (num / 2)}`).innerHTML = 
+                row[3].slice(-2) + 
+                "<br><hr>" + 
+                "■" + row[6] + 
+                "<br>" + 
+                row[7];
+            }
+          }
+          else {
+            for (let i = 0; i < num; i++) {
+              const index = shuffledIndex[startIndex + i];
+              const row = data[index];
+              if (!row) continue;
+        
+              // 問題
+              document.getElementById(`txt${i + 1}q`).innerHTML = row[3];
+        
+              // 解答
+              if (grade === 0 && cat === 4) {
+                // 語選択
+                document.getElementById(`txt${i + 1}`).innerHTML = row[5];
+              }
+              else if (grade === 0 && (cat === 9 || cat === 10)) {
+                // 対義語、類義語
+                document.getElementById(`txt${i + 1}`).innerHTML =
+                  row[4] +
+                  "<br><hr>" +
+                  "■" + row[6] + 
+                  "<br>" + 
+                  row[7] + 
+                  "<br>" + 
+                  "■" + row[8] + 
+                  "<br>" + 
+                  row[9];
+              }
+              else if (grade === 0) {
+                document.getElementById(`txt${i + 1}`).innerHTML =
+                  row[4] +
+                  "<br><hr>" +
+                  row[5];
+              }
+              else {
+                document.getElementById(`txt${i + 1}`).innerHTML = row[4];
+              }
+            }
+          }
+
+          // 1級・語選択 or 四字熟語・書き or 対義語・類義語 の選択肢
+          if (grade === 0 && (cat === 4 || cat === 5 || cat === 9 || cat === 10)) {
+            let arr;
+            if (cat === 4) {
+              arr = new Array(8);
+            }
+            else if (cat === 5) {
+              arr = new Array(10);
+            }
+            else {
+              arr = new Array(5);
+            }
+            
+            // 1～5問目
+            for (let i = 0; i < num; i++) {
+              const index = shuffledIndex[startIndex + i];
+              const index2 = shuffledIndex2[startIndex + i - (num / 2)];
+              const row = data[index];
+              const row2 = data[index2];
+
+              if (row) {
+                // 語選択のとき
+                if (cat === 4) {
+                  arr[i] = row[4];
+                }
+                // 四字熟語のとき（前抜き）
+                else if (cat === 5 && i < 5) {
+                  arr[i] = row[4];
+                }
+                // それ以外（対義語・類義語）
+                else {
+                  arr[i] = row[5];
+                }
+              }
+              if (row2) {
+                // 四字熟語のとき（後ろ抜き）
+                if (cat === 5 && i >= 5) {
+                    arr[i] = row2[5];
+                }
+              }
+            }
+      
+            // 語選択では追加3語
+            if (cat === 4) {
+              for (let i = 0; i < 3; i++) {
+                const index = shuffledIndex[startIndex + i];
+                const row = data[index];
+                if (!row) continue;
+        
+                const refIndex = parseInt(row[6]);
+                const refRow = data[refIndex];
+                if (refRow) {
+                  arr[num + i] = refRow[4];
+                }
+              }
+            }
+      
+            // 五十音順
+            arr.sort((a, b) =>
+              String(a).localeCompare(String(b),"ja", {
+                sensitivity: "base"
+              })
+            );
+      
+            // 表示
+            arr.forEach((value, i) => {
+              const el = document.getElementById(`sel${i}`);
+              if (el) {
+                el.textContent = value || "";
+              }
+            });
+      
+            // 選択肢のクリック
+            document
+              .querySelectorAll(".item")
+              .forEach(el => {
+                el.addEventListener(
+                  "click",
+                  () => {
+                    el.classList.toggle("strike");
+                  }
+                );
+              });
+          }
+        })
+      
+        .catch(error => {
+          console.error(error);
+          document.querySelector(
+            "#quizTable"
+          ).innerHTML = `
+            <tr>
+              <td colspan="3">
+                問題データを読み込めませんでした。
+              </td>
+            </tr>
+          `;
+        });
+
+      // 解答表示・非表示
+      document.addEventListener(
+        "click",
+        e => {
+          if (!e.target.classList.contains("toggleBtn")) {
+            return;
+          }
+      
+          const id = e.target.dataset.id;
+          const answer = document.getElementById(`txt${id}`);
+          const box = document.querySelector(`.box[data-index="${id}"]`);
+      
+          if (!answer || !box) {
+            return;
+          }
+      
+          answer.classList.toggle("hidden");
+          box.classList.toggle("hidden");
+        }
+      );
+
+      // 戻るリンク
+      document.getElementById("backLink").href =
+        `select.html?grade=${grade}&cat=${cat}&sel=${sel}&seed=${seed}`;
+      
+      // 前へリンク
+      const prevLink = document.getElementById("prevLink");
+      
+      if (sel === 0 && page === 0) {
+        // 最初なので何もしない
+        prevLink.removeAttribute("href");
+      }
+      else if (page === 0) {
+        // 前の十干十二支の最後
+        prevLink.href =
+          `quiz.html?grade=${grade}` +
+          `&cat=${cat}` +
+          `&sel=${sel - 1}` +
+          `&page=23` +
+          `&seed=${seed}`;
+      }
+      else {
+        // 前の二十四節気
+        prevLink.href =
+          `quiz.html?grade=${grade}` +
+          `&cat=${cat}` +
+          `&sel=${sel}` +
+          `&page=${page - 1}` +
+          `&seed=${seed}`;
+      }
+
+      // 次へリンク
+      const nextLink = document.getElementById("nextLink");
+      let nextStartIndex;
+      if (grade === 0 && cat === 5) {
+        nextStartIndex = (sel * 24 * num / 2) + ((page + 1) * num / 2);
+      }
+      else {
+        nextStartIndex = (sel * 24 * num) + ((page + 1) * num);
+      }
+      
+      // 次ページに num 問分存在するか確認
+      if (nextStartIndex >= max) {
+        // 最終ページ
+        nextLink.removeAttribute("href");
+      }
+      else if (page === 23) {
+        // 次の十干十二支の先頭
+        nextLink.href =
+          `quiz.html?grade=${grade}` +
+          `&cat=${cat}` +
+          `&sel=${sel + 1}` +
+          `&page=0` +
+          `&seed=${seed}`;
+      }
+      else {
+        // 次の二十四節気
+        nextLink.href =
+          `quiz.html?grade=${grade}` +
+          `&cat=${cat}` +
+          `&sel=${sel}` +
+          `&page=${page + 1}` +
+          `&seed=${seed}`;
+      }
+
+      // 乱数
+      function mulberry32(seed) {
+        return function() {
+          let t = seed += 0x6D2B79F5;
+          t = Math.imul(t ^ (t >>> 15), t | 1);
+          t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+          return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+        };
+      }
+      
+      // ■の色表示
+      function draw() {
+        const key = KEY_STR[cat];
+        const key2 = KEY_STR2[cat];
+      
+        // NULLカテゴリなどは状態管理対象外
+        if (!key || key.startsWith("NULL")) {
+          return;
+        }
+      
+        const data = localStorage.getItem(key);
+        if (!data) {
+          return;
+        }
+
+        let data2;
+        if (key2 !== null) {
+          data2 = localStorage.getItem(key2);
+          if (!data2) {
+            return;
+          }
+        }
+        
+        document
+          .querySelectorAll(".box")
+          .forEach(box => {
+            const questionNumber = Number(box.dataset.index);
+            const shuffledPosition = startIndex + questionNumber - 1;
+            const i = shuffledIndex[shuffledPosition];
+      
+            // 範囲外なら何もしない
+            if (i === undefined || data[i] === undefined) {
+              return;
+            }
+      
+            // 色だけ変更
+            box.classList.remove(
+              "c0",
+              "c1",
+              "c2",
+              "c3"
+            );
+
+            if (grade === 0 && cat === 5 && questionNumber > (num / 2) && key2 !== null) {
+              const shuffledPosition2 = startIndex + questionNumber - (num / 2) - 1;
+              const j = shuffledIndex2[shuffledPosition2];
+              box.classList.add("c" + data2[j]);
+            }
+            else {
+              box.classList.add("c" + data[i]);
+            }
+          });
+      }
+
+      // ■クリック処理
+      document
+        .querySelectorAll(".box")
+        .forEach(box => {
+          box.addEventListener("click", e => {
+            // 親要素へのクリック伝播を止める
+            e.stopPropagation();
     
+            const key = KEY_STR[cat];
+            const key2 = KEY_STR2[cat];
+    
+            // 状態管理対象外
+            if (!key || key.startsWith("NULL")) {
+              return;
+            }
+    
+            let data = localStorage.getItem(key)?.split("");
+            let data2 = null;
+            if (key2 !== null) {
+              data2 = localStorage.getItem(key2)?.split("");
+            }
+    
+            if (!data) {
+              return;
+            }
+
+            const questionNumber = Number(box.dataset.index);
+    
+            if (key2 !== null && questionNumber > (num / 2)) {
+              const i = shuffledIndex2[startIndex + questionNumber - (num / 2) - 1];
+              if (i === undefined || data2[i] === undefined) {
+                return;
+              }
+              // 0 → 1 → 2 → 3 → 0
+              data2[i] = (Number(data2[i]) + 1) % 4;
+              localStorage.setItem(key2, data2.join(""));
+            }
+            else {
+              const i = shuffledIndex[startIndex + questionNumber - 1];
+              if (i === undefined || data[i] === undefined) {
+                return;
+              }
+              // 0 → 1 → 2 → 3 → 0
+              data[i] = (Number(data[i]) + 1) % 4;
+              localStorage.setItem(key, data.join(""));
+            }
+      
+            draw();
+          });
+        });
+
+      // 初期表示
+      draw();
+
+    </script>
   </body>
 </html>
