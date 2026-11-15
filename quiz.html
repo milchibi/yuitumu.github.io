@@ -417,66 +417,6 @@
       document.getElementById("backLink").href =
         `select.html?grade=${grade}&cat=${cat}&sel=${sel}&seed=${seed}`;
       
-      // 前へリンク
-      const prevLink = document.getElementById("prevLink");
-      
-      if (sel === 0 && page === 0) {
-        // 最初なので何もしない
-        prevLink.removeAttribute("href");
-      }
-      else if (page === 0) {
-        // 前の十干十二支の最後
-        prevLink.href =
-          `quiz.html?grade=${grade}` +
-          `&cat=${cat}` +
-          `&sel=${sel - 1}` +
-          `&page=23` +
-          `&seed=${seed}`;
-      }
-      else {
-        // 前の二十四節気
-        prevLink.href =
-          `quiz.html?grade=${grade}` +
-          `&cat=${cat}` +
-          `&sel=${sel}` +
-          `&page=${page - 1}` +
-          `&seed=${seed}`;
-      }
-
-      // 次へリンク
-      const nextLink = document.getElementById("nextLink");
-      let nextStartIndex;
-      if (grade === 0 && cat === 5) {
-        nextStartIndex = (sel * 24 * num / 2) + ((page + 1) * num / 2);
-      }
-      else {
-        nextStartIndex = (sel * 24 * num) + ((page + 1) * num);
-      }
-      
-      // 次ページに num 問分存在するか確認
-      if (nextStartIndex >= max) {
-        // 最終ページ
-        nextLink.removeAttribute("href");
-      }
-      else if (page === 23) {
-        // 次の十干十二支の先頭
-        nextLink.href =
-          `quiz.html?grade=${grade}` +
-          `&cat=${cat}` +
-          `&sel=${sel + 1}` +
-          `&page=0` +
-          `&seed=${seed}`;
-      }
-      else {
-        // 次の二十四節気
-        nextLink.href =
-          `quiz.html?grade=${grade}` +
-          `&cat=${cat}` +
-          `&sel=${sel}` +
-          `&page=${page + 1}` +
-          `&seed=${seed}`;
-      }
-
       // 乱数
       function mulberry32(seed) {
         return function() {
