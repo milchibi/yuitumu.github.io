@@ -7,7 +7,174 @@
     <link rel="stylesheet" href="style.css">
   </head>
   <body>
-    ■読み<br>
-    <a href="riku.html">陸</a>　<a href="suityuu.html">水中</a>　<a href="kutyuu.html">空中</a>
+    <p class="title" id="pageSubtitle"></p>
+
+    <!-- 級選択 -->
+    <div id="gradeLinks"></div>
+    <br>
+    
+    ランダム用シード値　<input type="number" id="seed" name="seed" min="0" max="9999" step="1" value="0" placeholder="0～9999">
+    <br><br>
+
+    <!-- 分野 -->
+    <div id="categories"></div>
+    
+    <br><br>
+    <a href="..\..\index.html">戻る</a>
+
+    <script>
+      const params = new URLSearchParams(location.search);
+      const grade = parseInt(params.get('grade')) || 0;
+      const seed = parseInt(params.get('seed')) || 0;
+      document.getElementById("seed").value = seed;
+
+      // 種別
+      const sels = [
+        "陸","水中","空中",
+      ];
+
+      // 種別ごとの設定
+      const gradeConfig = {
+        11: {
+          title: "生き物の漢字",
+          categories: [
+            { title: "よみ", statusId: "status1", linkId: "linkContainer1", key: "yui_1", cat: 0, total: 110, unit: 10 },
+          ]
+        },
+      };
+    
+      // タイトル
+      document.getElementById("pageSubtitle").textContent = "生き物の漢字";
+
+      // 分野HTMLを生成
+      const categoryContainer = document.getElementById("categories");
+    
+      config.categories.forEach(category => {
+
+        // 見出し
+        const mark = document.createElement("mark");
+        mark.textContent = category.title;
+    
+        categoryContainer.appendChild(mark);
+    
+        // ステータス
+        const status = document.createElement("div");
+        status.id = category.statusId;
+    
+        categoryContainer.appendChild(status);
+        categoryContainer.appendChild(document.createElement("br"));
+    
+        // リンク
+        const links = document.createElement("div");
+        links.id = category.linkId;
+    
+        categoryContainer.appendChild(links);
+        categoryContainer.appendChild(document.createElement("br"));
+      });
+
+      // シード値付きで遷移
+      function addNumParameter(link, cat, index) {
+        link.addEventListener("click", function(e) {
+          e.preventDefault();
+          const seed = document.getElementById("seed").value;
+    
+          if (seed === "" || seed < 0 || seed > 9999) {
+            alert("シード値には、0～9999の数値を入力してください。");
+            return;
+          }
+    
+          location.href = `select.html?grade=${grade}&cat=${cat}&sel=${index}&seed=${seed}`;
+        });
+      }
+    
+      // 分野リンク生成    
+      function createLinks(category) {
+        const container = document.getElementById(category.linkId);
+    
+        // 必要なリンク数
+        let count;
+        if (category.statusId === "status41") {
+          count = Math.ceil((category.total * 2) / (24 * category.unit));
+        }
+        else {
+          count = Math.ceil(category.total / (24 * category.unit));
+        }
+    
+        for (let index = 0; index < count; index++) {
+          const link = document.createElement("a");
+    
+          link.href = `select.html?grade=${grade}&cat=${category.cat}&sel=${index}`;
+          link.textContent = sels[index];
+    
+          addNumParameter(link, category.cat, index);
+    
+          container.appendChild(link);
+          container.append("　");
+    
+          // 6個ごとに改行
+          if ((index + 1) % 6 === 0) {
+            container.appendChild(document.createElement("br"));
+            container.appendChild(document.createElement("br"));
+          }
+        }
+      }
+    
+      // localStorageの状態を取得
+      function getStatus(key, count) {
+        let value = localStorage.getItem(key);
+        let status;
+    
+        if (value === null) {
+          status = "0".repeat(count);
+        } else {
+          status = String(value);
+          if (status.length < count) {
+            status += "0".repeat(count - status.length);
+          }
+    
+          // 万一長すぎた場合
+          if (status.length > count) {
+            status = status.substring(0, count);
+          }
+        }
+        localStorage.setItem(key, status);
+    
+        return status;
+      }
+    
+      // ステータス表示
+      function showStatus(category, status, status2) {    
+        let cnt0 = (status.match(/0/g) || []).length;
+        let cnt1 = (status.match(/1/g) || []).length;
+        let cnt2 = (status.match(/2/g) || []).length;
+        let cnt3 = (status.match(/3/g) || []).length;
+        if (status2 !== null)
+        {
+          cnt0 += (status2.match(/0/g) || []).length;
+          cnt1 += (status2.match(/1/g) || []).length;
+          cnt2 += (status2.match(/2/g) || []).length;
+          cnt3 += (status2.match(/3/g) || []).length;
+        }
+    
+        document.getElementById(category.statusId).innerHTML =
+          `<a href="list.html?grade=${grade}&cat=${category.cat}&status=0&seed=${seed}"><span class="c0">⬛︎</span>${cnt0}</a>` +
+          `　<a href="list.html?grade=${grade}&cat=${category.cat}&status=1&seed=${seed}"><span class="c1">⬛︎</span>${cnt1}</a>` +
+          `　<a href="list.html?grade=${grade}&cat=${category.cat}&status=2&seed=${seed}"><span class="c2">⬛︎</span>${cnt2}</a>` +
+          `　<a href="list.html?grade=${grade}&cat=${category.cat}&status=3&seed=${seed}"><span class="c3">⬛︎</span>${cnt3}</a>`;
+      }
+    
+      // 全分野を処理
+      config.categories.forEach(category => {
+        // リンク生成
+        createLinks(category);
+    
+        // localStorage取得
+        const status = getStatus(category.key, category.total);
+        let status2 = null;
+    
+        // 状態表示
+        showStatus(category, status, null);
+      });
+    </script>
   </body>
 </html>
