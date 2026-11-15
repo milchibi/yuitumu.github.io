@@ -18,16 +18,7 @@
 
     <!-- 分野 -->
     <div id="categories"></div>
-    
-    <br><br>
-    <a href="..\..\index.html">戻る</a>
-
     <script>
-      const params = new URLSearchParams(location.search);
-      const grade = parseInt(params.get('grade')) || 0;
-      const seed = parseInt(params.get('seed')) || 0;
-      document.getElementById("seed").value = seed;
-
       // 種別
       const sels = [
         "陸","水中","空中",
@@ -83,7 +74,7 @@
             return;
           }
     
-          location.href = `quiz.html?grade=${grade}&cat=${cat}&sel=${index}&seed=${seed}`;
+          location.href = `quiz.html?cat=${cat}&sel=${index}&seed=${seed}`;
         });
       }
     
@@ -103,7 +94,7 @@
         for (let index = 0; index < count; index++) {
           const link = document.createElement("a");
     
-          link.href = `select.html?grade=${grade}&cat=${category.cat}&sel=${index}`;
+          link.href = `select.html?&cat=${category.cat}&sel=${index}`;
           link.textContent = sels[index];
     
           addNumParameter(link, category.cat, index);
@@ -157,10 +148,10 @@
         }
     
         document.getElementById(category.statusId).innerHTML =
-          `<a href="list.html?grade=${grade}&cat=${category.cat}&status=0&seed=${seed}"><span class="c0">⬛︎</span>${cnt0}</a>` +
-          `　<a href="list.html?grade=${grade}&cat=${category.cat}&status=1&seed=${seed}"><span class="c1">⬛︎</span>${cnt1}</a>` +
-          `　<a href="list.html?grade=${grade}&cat=${category.cat}&status=2&seed=${seed}"><span class="c2">⬛︎</span>${cnt2}</a>` +
-          `　<a href="list.html?grade=${grade}&cat=${category.cat}&status=3&seed=${seed}"><span class="c3">⬛︎</span>${cnt3}</a>`;
+          `<span class="c0">⬛︎</span>${cnt0}` +
+          `　<span class="c1">⬛︎</span>${cnt1}` +
+          `　<span class="c2">⬛︎</span>${cnt2}` +
+          `　<span class="c3">⬛︎</span>${cnt3}`;
       }
     
       // 全分野を処理
