@@ -33,7 +33,10 @@
           ]
         },
       };
-    
+
+      // grade が存在しない場合
+      const config = gradeConfig[grade] || gradeConfig[0];
+      
       // タイトル
       document.getElementById("pageSubtitle").textContent = "生き物の漢字";
 
